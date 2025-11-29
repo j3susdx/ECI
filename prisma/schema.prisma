@@ -1,0 +1,69 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  lastName  String
+  name      String
+  password  String
+  role      UserRole @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  evaluations Evaluation[]
+  courses     Course[]
+
+  @@map("users")
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  professor   User         @relation(fields: [professorId], references: [id])
+  professorId String
+  evaluations Evaluation[]
+
+  @@map("courses")
+}
+
+model Evaluation {
+  id            String   @id @default(cuid())
+  courseId      String
+  studentId     String
+  participation Int
+  clarity       Int
+  pace          Int
+  comments      String?
+  studentName   String?
+  aiAnalysis    String?
+  isAnonymous   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relaciones
+  course  Course @relation(fields: [courseId], references: [id])
+  student User   @relation(fields: [studentId], references: [id])
+
+  @@map("evaluations")
+}
+
+enum UserRole {
+  STUDENT
+  PROFESSOR
+  ADMIN
+}

@@ -1,26 +1,159 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Colores Hexadecimales Estándar (Safe for PDF generation) */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a0a;
+  
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  
+  /* Tu azul personalizado */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  
+  --secondary: #f3f4f6;
+  --secondary-foreground: #18181b;
+  
+  --muted: #f3f4f6;
+  --muted-foreground: #71717a;
+  
+  --accent: #f3f4f6;
+  --accent-foreground: #18181b;
+  
+  /* Tu verde personalizado */
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #2563eb;
+  
+  /* Gráficos (Charts) convertidos a Hex */
+  --chart-1: #2563eb; /* Azul */
+  --chart-2: #16a34a; /* Verde */
+  --chart-3: #f97316; /* Naranja */
+  --chart-4: #a855f7; /* Morado */
+  --chart-5: #06b6d4; /* Cyan */
+  
+  --radius: 0.75rem;
+  
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #1e293b;
+  --sidebar-primary-foreground: #f8fafc;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #cbd5e1;
+}
+
+.dark {
+  /* Modo Oscuro en Hexadecimal */
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  
+  --card: #0a0a0a;
+  --card-foreground: #ededed;
+  
+  --popover: #0a0a0a;
+  --popover-foreground: #ededed;
+  
+  --primary: #3b82f6; /* Azul más claro para modo oscuro */
+  --primary-foreground: #ffffff;
+  
+  --secondary: #27272a;
+  --secondary-foreground: #ededed;
+  
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  
+  --accent: #27272a;
+  --accent-foreground: #ededed;
+  
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+  
+  --destructive: #7f1d1d;
+  --destructive-foreground: #ededed;
+  
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #1d4ed8;
+  
+  --chart-1: #3b82f6;
+  --chart-2: #22c55e;
+  --chart-3: #fb923c;
+  --chart-4: #c084fc;
+  --chart-5: #22d3ee;
+  
+  --sidebar: #18181b;
+  --sidebar-foreground: #f4f4f5;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #27272a;
+  --sidebar-accent-foreground: #f4f4f5;
+  --sidebar-border: #27272a;
+  --sidebar-ring: #3f3f46;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
 }
