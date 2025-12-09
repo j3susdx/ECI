@@ -1,5 +1,5 @@
 "use client";
-// plantilla de dashboard para profesores
+
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Card,
