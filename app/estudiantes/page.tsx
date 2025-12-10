@@ -125,18 +125,15 @@ export default function Home() {
             />
 
             <Tabs defaultValue="recent" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-1">
                 <TabsTrigger value="recent">Evaluaciones Recientes</TabsTrigger>
-                <TabsTrigger value="analysis">Análisis por Curso</TabsTrigger>
               </TabsList>
               
               <TabsContent value="recent" className="space-y-4">
                 <RecentEvaluations key={`evaluations-${refreshKey}`} selectedCourse={selectedCourse} />
               </TabsContent>
               
-              <TabsContent value="analysis" className="space-y-4">
-                <CourseAnalysis key={`analysis-${refreshKey}`} selectedCourse={selectedCourse} />
-              </TabsContent>
+              
             </Tabs>
           </div>
 

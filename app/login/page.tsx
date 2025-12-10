@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GraduationCap, Star, Users, Loader2 } from "lucide-react";
-import Link from "next/link";
+// Eliminamos el import de Link ya que no se usará
 import { toast } from "sonner";
 import { loginAction } from "@/actions/login.action";
 
@@ -204,18 +204,9 @@ function LoginPage() {
                 </Button>
               </form>
 
-              <div className="text-center">
-                <p className="text-sm text-gray-600">
-                  ¿No tienes una cuenta?{" "}
-                  <Link href="/register">
-                    <Button variant="link" className="p-0 h-auto text-blue-600">
-                      Regístrate aquí
-                    </Button>
-                  </Link>
-                </p>
-              </div>
+              {/* Se eliminó la sección de registro aquí */}
 
-              <p className="text-xs text-center text-gray-500 px-4">
+              <p className="text-xs text-center text-gray-500 px-4 mt-4">
                 Al iniciar sesión, aceptas nuestros{" "}
                 <Button variant="link" className="p-0 h-auto text-blue-600">
                   Términos de servicio

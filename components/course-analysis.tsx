@@ -213,9 +213,10 @@ export function CourseAnalysis({ selectedCourse }: CourseAnalysisProps) {
                   Análisis Inteligente Gemini
                 </span>
               </div>
-              <div className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">
-                {analysisResult}
-              </div>
+              <div
+                className="text-sm text-slate-700 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: analysisResult }}
+              />
             </div>
           )}
         </CardContent>

@@ -26,14 +26,14 @@ import {
   BookOpen,
   LogOut,
   Loader2,
-  Trash2, // Nuevo icono para borrar
-  FileText
+  Trash2, 
 } from "lucide-react";
 import {
   getEvaluationsAction,
   generatePDFReportAction,
   generateCourseAnalysisAction,
-  deleteEvaluationAction, // Importamos la acción de eliminar
+  deleteEvaluationAction,
+  getProfessorCoursesAction, // 👈 IMPORTAMOS LA NUEVA ACCIÓN
 } from "@/lib/server-actions";
 import { cn } from "@/lib/utils";
 import {
@@ -46,7 +46,6 @@ import {
 import { signOutToLogin } from "@/actions/signout.action";
 import { toast } from "sonner";
 
-// --- COMPONENTE PARA ESTRELLAS ---
 function StarDisplay({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-1">
@@ -66,27 +65,31 @@ function StarDisplay({ rating }: { rating: number }) {
   );
 }
 
-// --- COMPONENTE PRINCIPAL ---
 export default function ProfessorDashboard() {
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [allEvaluations, setAllEvaluations] = useState<any[]>([]);
+  const [coursesList, setCoursesList] = useState<any[]>([]); // 👈 ESTADO PARA LOS CURSOS
   const [loading, setLoading] = useState(true);
   
-  // Estados de carga y UI
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [courseAnalysis, setCourseAnalysis] = useState("");
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  // 1. CARGAR DATOS (Desde Base de Datos)
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await getEvaluationsAction("all");
-      setAllEvaluations(data);
+      // Cargamos evaluaciones Y cursos en paralelo
+      const [evalsData, coursesData] = await Promise.all([
+        getEvaluationsAction("all"),
+        getProfessorCoursesAction()
+      ]);
+      
+      setAllEvaluations(evalsData);
+      setCoursesList(coursesData); // Guardamos la lista oficial de cursos asignados
     } catch (error) {
       console.error("Error cargando datos:", error);
-      toast.error("Error al cargar las evaluaciones");
+      toast.error("Error al cargar los datos");
     } finally {
       setLoading(false);
     }
@@ -96,28 +99,13 @@ export default function ProfessorDashboard() {
     loadData();
   }, []);
 
-  // 2. FILTRAR EVALUACIONES
   const filteredEvaluations = useMemo(() => {
     if (selectedCourse === "all") return allEvaluations;
     return allEvaluations.filter((ev) => ev.course === selectedCourse);
   }, [selectedCourse, allEvaluations]);
 
-  // 3. LISTA DE CURSOS
-  const coursesList = useMemo(() => {
-    const coursesMap = new Map();
-    allEvaluations.forEach((ev) => {
-      if (!coursesMap.has(ev.course)) {
-        coursesMap.set(ev.course, ev.courseName);
-      }
-    });
-    return Array.from(coursesMap.entries()).map(([code, name]) => ({
-      code,
-      name,
-      count: allEvaluations.filter((e) => e.course === code).length
-    }));
-  }, [allEvaluations]);
+  // Ya no derivamos coursesList de las evaluaciones, usamos el estado coursesList directo.
 
-  // 4. CALCULAR ESTADÍSTICAS
   const stats = useMemo(() => {
     if (filteredEvaluations.length === 0) return null;
 
@@ -147,9 +135,6 @@ export default function ProfessorDashboard() {
     };
   }, [filteredEvaluations]);
 
-  // --- ACCIONES ---
-
-  // ELIMINAR EVALUACIÓN
   const handleDeleteEvaluation = async (id: string) => {
     if (!confirm("¿Estás seguro de eliminar esta evaluación?")) return;
     setIsDeleting(id);
@@ -158,6 +143,8 @@ export default function ProfessorDashboard() {
       if (result.success) {
         toast.success("Evaluación eliminada correctamente");
         setAllEvaluations(prev => prev.filter(ev => ev.id !== id));
+        // Actualizamos también el contador en la lista de cursos visualmente
+        loadData(); // Recargamos para actualizar contadores
       } else {
         toast.error("Error al eliminar");
       }
@@ -168,19 +155,17 @@ export default function ProfessorDashboard() {
     }
   };
 
-  // GENERAR PDF (CON FIX DE COLORES)
   const handleGeneratePDF = async () => {
     if (!stats) return;
     setIsGeneratingPDF(true);
     try {
       const htmlContent = await generatePDFReportAction(filteredEvaluations, stats);
+      // @ts-ignore
       const html2pdf = (await import("html2pdf.js")).default;
 
       const element = document.createElement("div");
       element.innerHTML = htmlContent;
       element.style.width = "800px"; 
-      
-      // FIX: Forzar colores estándar (Blanco/Negro)
       element.style.backgroundColor = "#ffffff"; 
       element.style.color = "#000000";
 
@@ -203,7 +188,6 @@ export default function ProfessorDashboard() {
     }
   };
 
-  // ANÁLISIS IA
   const handleGenerateCourseAnalysis = async () => {
     if (selectedCourse === "all") {
       setCourseAnalysis("Por favor selecciona un curso específico.");
@@ -241,7 +225,6 @@ export default function ProfessorDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -279,10 +262,8 @@ export default function ProfessorDashboard() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-3 space-y-8">
             
-            {/* Selector de Curso */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -328,7 +309,6 @@ export default function ProfessorDashboard() {
               </CardContent>
             </Card>
 
-            {/* Estadísticas Principales */}
             {stats && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
@@ -371,7 +351,6 @@ export default function ProfessorDashboard() {
               </div>
             )}
 
-            {/* Análisis de IA */}
             {selectedCourse !== "all" && (
               <Card>
                 <CardHeader>
@@ -415,7 +394,6 @@ export default function ProfessorDashboard() {
               </Card>
             )}
 
-            {/* Pestañas: Evaluaciones y Estadísticas */}
             <Tabs defaultValue="evaluations" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="evaluations">Evaluaciones de Estudiantes</TabsTrigger>
@@ -434,7 +412,6 @@ export default function ProfessorDashboard() {
                   <div className="space-y-4">
                     {filteredEvaluations.map((ev: any) => (
                       <Card key={ev.id} className="group hover:shadow-md transition-all relative">
-                        {/* BOTÓN ELIMINAR */}
                         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                           <Button 
                             variant="destructive" 
@@ -545,7 +522,6 @@ export default function ProfessorDashboard() {
             </Tabs>
           </div>
 
-          {/* Sidebar - Resumen Rápido */}
           <div className="space-y-6">
             <Card>
               <CardHeader><CardTitle className="text-lg">Resumen General</CardTitle></CardHeader>
