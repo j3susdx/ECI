@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Shield, Search, UserCog, GraduationCap, Trash2, Loader2, LogOut, 
-  BookOpen, Plus 
+  Shield, Search, UserCog, Trash2, Loader2, LogOut, 
+  Plus, UserPlus 
 } from "lucide-react";
 import { 
-  getAllUsersAction, updateUserRoleAction, deleteUserAction,
+  getAllUsersAction, updateUserRoleAction, deleteUserAction, createUserAction, // Importamos la nueva acción
   getAllCoursesAction, createCourseAction, assignProfessorToCourseAction, deleteCourseAction 
 } from "@/lib/server-actions";
 import { toast, Toaster } from "sonner"; 
@@ -26,16 +26,18 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // --- NUEVO: CONTROL DE PESTAÑAS ---
-  // Esto evita que se resetee a "users" cuando creas un curso
   const [activeTab, setActiveTab] = useState("users");
 
+  // --- ESTADO PARA NUEVO USUARIO ---
+  const [newUser, setNewUser] = useState({ name: "", lastName: "", email: "", password: "", role: "STUDENT" });
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+
+  // --- ESTADO PARA NUEVO CURSO ---
   const [newCourse, setNewCourse] = useState({ code: "", name: "", professorId: "" });
   const [isCreatingCourse, setIsCreatingCourse] = useState(false);
 
-  // Carga inicial de datos
+  // Carga inicial
   const loadAllData = async () => {
-    // No ponemos loading=true aquí para evitar parpadeos feos al recargar datos
     try {
       const [usersRes, coursesRes] = await Promise.all([
         getAllUsersAction(),
@@ -49,7 +51,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Solo loading true al montar el componente la primera vez
   useEffect(() => {
     const init = async () => {
       await loadAllData();
@@ -58,13 +59,38 @@ export default function AdminDashboard() {
     init();
   }, []);
 
-  // --- USUARIOS ---
+  // --- HANDLERS USUARIOS ---
+
+  // 1. CREAR USUARIO (NUEVO)
+  const handleCreateUser = async () => {
+    if (!newUser.name || !newUser.lastName || !newUser.email || !newUser.password) {
+      toast.warning("Completa todos los campos del usuario");
+      return;
+    }
+
+    setIsCreatingUser(true);
+    try {
+      const res = await createUserAction(newUser);
+      
+      if (res.success) {
+        toast.success("¡Usuario registrado exitosamente!");
+        setNewUser({ name: "", lastName: "", email: "", password: "", role: "STUDENT" }); // Limpiar form
+        await loadAllData(); // Recargar lista
+      } else {
+        toast.error(res.error || "Error al crear usuario");
+      }
+    } catch (e) {
+      toast.error("Error inesperado");
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
   const handleRoleChange = async (id: string, role: string) => {
     toast.promise(updateUserRoleAction(id, role), {
       loading: 'Actualizando...',
       success: (data) => { 
         if(data.success) {
-          // Actualización optimista
           setUsers(users.map(u => u.id === id ? { ...u, role } : u)); 
           return "Rol actualizado correctamente"; 
         }
@@ -85,7 +111,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- CURSOS ---
+  // --- HANDLERS CURSOS ---
   const handleCreateCourse = async () => {
     if (!newCourse.code || !newCourse.name || !newCourse.professorId) {
       toast.warning("Completa todos los campos del curso");
@@ -99,11 +125,7 @@ export default function AdminDashboard() {
       if (res.success) {
         toast.success("¡Curso creado exitosamente!");
         setNewCourse({ code: "", name: "", professorId: "" });
-        
-        // Recargamos datos sin cambiar la pestaña
         await loadAllData();
-        
-        // Aseguramos que se mantenga en la pestaña de cursos
         setActiveTab("courses");
       } else {
         toast.error(res.error || "Error al crear curso");
@@ -173,21 +195,67 @@ export default function AdminDashboard() {
           </Button>
         </div>
 
-        {/* Tabs controladas con 'value' y 'onValueChange' */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8 h-12 bg-white border shadow-sm">
             <TabsTrigger value="users">Gestión de Usuarios</TabsTrigger>
             <TabsTrigger value="courses">Gestión de Cursos & Docentes</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users" className="space-y-4">
+          <TabsContent value="users" className="space-y-6">
+            
+            {/* --- SECCIÓN NUEVA: CREAR USUARIO --- */}
+            <Card className="border-2 border-dashed bg-white/50 shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base flex items-center gap-2 text-gray-700">
+                  <UserPlus className="h-5 w-5 text-primary"/> Registrar Nuevo Usuario
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+                  <div className="grid gap-2 col-span-1">
+                    <label className="text-xs font-medium text-gray-500">NOMBRE</label>
+                    <Input placeholder="Juan" value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} className="bg-white" />
+                  </div>
+                  <div className="grid gap-2 col-span-1">
+                    <label className="text-xs font-medium text-gray-500">APELLIDO</label>
+                    <Input placeholder="Pérez" value={newUser.lastName} onChange={e => setNewUser({...newUser, lastName: e.target.value})} className="bg-white" />
+                  </div>
+                  <div className="grid gap-2 col-span-2">
+                    <label className="text-xs font-medium text-gray-500">EMAIL</label>
+                    <Input placeholder="juan@ejemplo.com" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className="bg-white" />
+                  </div>
+                  <div className="grid gap-2 col-span-1">
+                    <label className="text-xs font-medium text-gray-500">CONTRASEÑA</label>
+                    <Input type="password" placeholder="******" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="bg-white" />
+                  </div>
+                  <div className="grid gap-2 col-span-1">
+                    <label className="text-xs font-medium text-gray-500">ROL</label>
+                    <Select value={newUser.role} onValueChange={v => setNewUser({...newUser, role: v})}>
+                      <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="STUDENT">Estudiante</SelectItem>
+                        <SelectItem value="PROFESSOR">Profesor</SelectItem>
+                        <SelectItem value="ADMIN">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <Button onClick={handleCreateUser} disabled={isCreatingUser} className="min-w-[140px]">
+                    {isCreatingUser ? <Loader2 className="animate-spin h-4 w-4 mr-2"/> : <Plus className="h-4 w-4 mr-2" />} Registrar Usuario
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* --- LISTA DE USUARIOS --- */}
             <Card className="border-none shadow-md">
               <CardHeader className="pb-4">
                 <div className="flex justify-between items-center">
-                  <CardTitle>Usuarios ({filteredUsers.length})</CardTitle>
+                  <CardTitle>Usuarios Registrados ({filteredUsers.length})</CardTitle>
                   <div className="relative w-72">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Buscar..." className="pl-9 bg-gray-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    <Input placeholder="Buscar por nombre o email..." className="pl-9 bg-gray-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                   </div>
                 </div>
               </CardHeader>
@@ -239,6 +307,7 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
+          {/* --- GESTIÓN DE CURSOS (Sin cambios, solo se muestra para completitud) --- */}
           <TabsContent value="courses" className="space-y-6">
             <Card className="border-2 border-dashed bg-white/50 shadow-sm">
               <CardHeader className="pb-4">
