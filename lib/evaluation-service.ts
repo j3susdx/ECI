@@ -1,4 +1,3 @@
-// lib/evaluation-service.ts
 import { prisma } from '@/lib/db'
 
 export interface EvaluationData {
@@ -101,9 +100,10 @@ export const EvaluationService = {
       }
     }
 
-    const totalParticipation = evaluations.reduce((sum, eval) => sum + eval.participation, 0)
-    const totalClarity = evaluations.reduce((sum, eval) => sum + eval.clarity, 0)
-    const totalPace = evaluations.reduce((sum, eval) => sum + eval.pace, 0)
+    // CORRECCIÓN: Cambiado 'eval' por 'evaluation'
+    const totalParticipation = evaluations.reduce((sum, evaluation) => sum + evaluation.participation, 0)
+    const totalClarity = evaluations.reduce((sum, evaluation) => sum + evaluation.clarity, 0)
+    const totalPace = evaluations.reduce((sum, evaluation) => sum + evaluation.pace, 0)
 
     const averageParticipation = totalParticipation / evaluations.length
     const averageClarity = totalClarity / evaluations.length
@@ -144,9 +144,10 @@ export const EvaluationService = {
       }
     }
 
-    const totalParticipation = evaluations.reduce((sum, eval) => sum + eval.participation, 0)
-    const totalClarity = evaluations.reduce((sum, eval) => sum + eval.clarity, 0)
-    const totalPace = evaluations.reduce((sum, eval) => sum + eval.pace, 0)
+    // CORRECCIÓN: Cambiado 'eval' por 'evaluation'
+    const totalParticipation = evaluations.reduce((sum, evaluation) => sum + evaluation.participation, 0)
+    const totalClarity = evaluations.reduce((sum, evaluation) => sum + evaluation.clarity, 0)
+    const totalPace = evaluations.reduce((sum, evaluation) => sum + evaluation.pace, 0)
 
     const averageParticipation = totalParticipation / evaluations.length
     const averageClarity = totalClarity / evaluations.length
@@ -168,11 +169,12 @@ export const EvaluationService = {
       Ritmo: averagePace,
     }
 
-    const bestAspect = Object.entries(aspects).reduce((a, b) => 
+    // CORRECCIÓN: Usamos 'as keyof typeof aspects'
+    const bestAspect = Object.entries(aspects).reduce((a, b) =>
       aspects[a[0] as keyof typeof aspects] > aspects[b[0] as keyof typeof aspects] ? a : b
     )[0]
 
-    const improvementArea = Object.entries(aspects).reduce((a, b) => 
+    const improvementArea = Object.entries(aspects).reduce((a, b) =>
       aspects[a[0] as keyof typeof aspects] < aspects[b[0] as keyof typeof aspects] ? a : b
     )[0]
 
@@ -237,7 +239,7 @@ export const CourseService = {
           select: {
             name: true,
             email: true,
-            department: true,
+            // CORRECCIÓN: 'department' eliminado porque no existe en User
           },
         },
       },
@@ -267,6 +269,10 @@ export const CourseService = {
     })
   },
 
+  /* CORRECCIÓN: Funciones comentadas porque 'courseEnrollment' 
+     no existe en prisma.schema. Descomentar si se agrega el modelo.
+  */
+  /*
   // Inscribir estudiante en curso
   async enrollStudent(courseId: string, studentId: string) {
     return await prisma.courseEnrollment.create({
@@ -290,16 +296,26 @@ export const CourseService = {
       },
     })
   },
+  */
 }
 
 // Servicio para Usuarios
 export const UserService = {
   // Crear usuario
-  async createUser(email: string, name: string, role: 'STUDENT' | 'PROFESSOR' | 'ADIN') {
+  // CORRECCIÓN: Agregados lastName y password, corregido 'ADMIN'
+  async createUser(
+    email: string,
+    name: string,
+    lastName: string,
+    password: string,
+    role: 'STUDENT' | 'PROFESSOR' | 'ADMIN'
+  ) {
     return await prisma.user.create({
       data: {
         email,
         name,
+        lastName,
+        password,
         role,
       },
     })

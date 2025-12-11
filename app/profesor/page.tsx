@@ -26,14 +26,14 @@ import {
   BookOpen,
   LogOut,
   Loader2,
-  Trash2, 
+  Trash2,
 } from "lucide-react";
 import {
   getEvaluationsAction,
   generatePDFReportAction,
   generateCourseAnalysisAction,
   deleteEvaluationAction,
-  getProfessorCoursesAction, // 👈 IMPORTAMOS LA NUEVA ACCIÓN
+  getProfessorCoursesAction,
 } from "@/lib/server-actions";
 import { cn } from "@/lib/utils";
 import {
@@ -68,9 +68,8 @@ function StarDisplay({ rating }: { rating: number }) {
 export default function ProfessorDashboard() {
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [allEvaluations, setAllEvaluations] = useState<any[]>([]);
-  const [coursesList, setCoursesList] = useState<any[]>([]); // 👈 ESTADO PARA LOS CURSOS
+  const [coursesList, setCoursesList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [courseAnalysis, setCourseAnalysis] = useState("");
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
@@ -79,14 +78,12 @@ export default function ProfessorDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Cargamos evaluaciones Y cursos en paralelo
       const [evalsData, coursesData] = await Promise.all([
         getEvaluationsAction("all"),
         getProfessorCoursesAction()
       ]);
-      
       setAllEvaluations(evalsData);
-      setCoursesList(coursesData); // Guardamos la lista oficial de cursos asignados
+      setCoursesList(coursesData);
     } catch (error) {
       console.error("Error cargando datos:", error);
       toast.error("Error al cargar los datos");
@@ -104,8 +101,6 @@ export default function ProfessorDashboard() {
     return allEvaluations.filter((ev) => ev.course === selectedCourse);
   }, [selectedCourse, allEvaluations]);
 
-  // Ya no derivamos coursesList de las evaluaciones, usamos el estado coursesList directo.
-
   const stats = useMemo(() => {
     if (filteredEvaluations.length === 0) return null;
 
@@ -116,7 +111,7 @@ export default function ProfessorDashboard() {
     const overall = (avgPart + avgClar + avgPace) / 3;
 
     const aspects = { "Participación": avgPart, "Claridad": avgClar, "Ritmo": avgPace };
-    const sortedAspects = Object.entries(aspects).sort(([,a], [,b]) => b - a);
+    const sortedAspects = Object.entries(aspects).sort(([, a], [, b]) => b - a);
 
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -143,7 +138,6 @@ export default function ProfessorDashboard() {
       if (result.success) {
         toast.success("Evaluación eliminada correctamente");
         setAllEvaluations(prev => prev.filter(ev => ev.id !== id));
-        // Actualizamos también el contador en la lista de cursos visualmente
         loadData(); // Recargamos para actualizar contadores
       } else {
         toast.error("Error al eliminar");
@@ -155,34 +149,37 @@ export default function ProfessorDashboard() {
     }
   };
 
+  // ✅ AQUÍ ESTÁ EL ÚNICO CAMBIO: Generación limpia con jsPDF
   const handleGeneratePDF = async () => {
     if (!stats) return;
     setIsGeneratingPDF(true);
     try {
-      const htmlContent = await generatePDFReportAction(filteredEvaluations, stats);
+      // 1. Traemos el TEXTO PLANO del servidor (asegúrate que server-actions devuelva texto)
+      const reportText = await generatePDFReportAction(filteredEvaluations, stats);
+
+      // 2. Usamos jsPDF para escribir texto vectorial (nítido)
       // @ts-ignore
-      const html2pdf = (await import("html2pdf.js")).default;
+      const jsPDF = (await import("jspdf")).default;
+      const doc = new jsPDF();
 
-      const element = document.createElement("div");
-      element.innerHTML = htmlContent;
-      element.style.width = "800px"; 
-      element.style.backgroundColor = "#ffffff"; 
-      element.style.color = "#000000";
+      // 3. Configuración de fuente (Courier o Helvetica para mejor lectura)
+      doc.setFont("courier"); // Monospace ayuda a mantener el orden
+      doc.setFontSize(10);
 
-      const opt = {
-        margin: 10, 
-        filename: `reporte-${selectedCourse}-${new Date().toISOString().split("T")[0]}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, backgroundColor: "#ffffff" },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
+      // 4. Ajustar texto al ancho de la página (márgenes automáticos)
+      const pageWidth = 190; // A4 (210) - Márgenes (20)
+      const splitText = doc.splitTextToSize(reportText, pageWidth);
 
-      await html2pdf().set(opt as any).from(element).save();
-      toast.success("Reporte PDF descargado");
+      // 5. Escribir
+      doc.text(splitText, 10, 10);
+
+      // 6. Guardar
+      doc.save(`Reporte-${selectedCourse}.pdf`);
+      toast.success("Reporte descargado correctamente");
 
     } catch (error) {
       console.error("Error PDF:", error);
-      toast.error("Error al generar PDF. Revisa la consola.");
+      toast.error("Error al generar PDF.");
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -196,9 +193,14 @@ export default function ProfessorDashboard() {
     setIsGeneratingAnalysis(true);
     try {
       const result = await generateCourseAnalysisAction(selectedCourse, filteredEvaluations);
-      if (result.success && result.analysis) {
-        setCourseAnalysis(result.analysis);
+
+      const safeResult = result as any;
+
+      if (safeResult.success && safeResult.analysis) {
+        setCourseAnalysis(safeResult.analysis);
         toast.success("Análisis generado");
+      } else {
+        toast.error(safeResult.error || "No se pudo generar el análisis.");
       }
     } catch (error) {
       toast.error("Error de conexión con IA");
@@ -263,7 +265,7 @@ export default function ProfessorDashboard() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3 space-y-8">
-            
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -379,8 +381,8 @@ export default function ProfessorDashboard() {
                 </CardHeader>
                 <CardContent>
                   {courseAnalysis ? (
-                    <div className="bg-muted/50 rounded-lg p-4 border border-primary/10">
-                      <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                    <div className="bg-slate-50 rounded-lg p-5 border border-slate-200 shadow-sm">
+                      <div className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-mono">
                         {courseAnalysis}
                       </div>
                     </div>
@@ -413,15 +415,15 @@ export default function ProfessorDashboard() {
                     {filteredEvaluations.map((ev: any) => (
                       <Card key={ev.id} className="group hover:shadow-md transition-all relative">
                         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                          <Button 
-                            variant="destructive" 
-                            size="icon" 
+                          <Button
+                            variant="destructive"
+                            size="icon"
                             className="h-8 w-8 shadow-sm"
                             onClick={() => handleDeleteEvaluation(ev.id)}
                             disabled={isDeleting === ev.id}
                             title="Eliminar evaluación"
                           >
-                            {isDeleting === ev.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
+                            {isDeleting === ev.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                           </Button>
                         </div>
 
