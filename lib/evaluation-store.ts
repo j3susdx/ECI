@@ -69,9 +69,14 @@ export function getStatistics() {
     Ritmo: averagePace,
   }
 
-  const bestAspect = Object.entries(aspects).reduce((a, b) => (aspects[a[0]] > aspects[b[0]] ? a : b))[0]
+  // CORRECCIÓN: Agregado 'as keyof typeof aspects' para evitar errores de índice
+  const bestAspect = Object.entries(aspects).reduce((a, b) =>
+    (aspects[a[0] as keyof typeof aspects] > aspects[b[0] as keyof typeof aspects] ? a : b)
+  )[0]
 
-  const improvementArea = Object.entries(aspects).reduce((a, b) => (aspects[a[0]] < aspects[b[0]] ? a : b))[0]
+  const improvementArea = Object.entries(aspects).reduce((a, b) =>
+    (aspects[a[0] as keyof typeof aspects] < aspects[b[0] as keyof typeof aspects] ? a : b)
+  )[0]
 
   return {
     overallAverage: Math.round(overallAverage * 10) / 10,

@@ -2,15 +2,16 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 
 // Note: This will require server actions since we can't access server env vars from client
 const getGeminiClient = () => {
-  // This is a placeholder - in a real implementation, you'd need to pass the API key from a server action
-  // For now, we'll show an error message to guide the user
+  // Check for server environment
   if (typeof window !== "undefined") {
     throw new Error(
-      "Gemini client should not be initialized on the client side for security reasons. Please use server actions.",
+      "SECURITY ERROR: Gemini client cannot be used on client-side. Use Server Actions instead.",
     )
   }
 
-  const apiKey = "AIzaSyAiFW5cYPMVAc2gjqFCMpO6OO_8mMTuClQ"
+  // 🔒 SEGURIDAD: Leemos del archivo .env
+  const apiKey = process.env.GEMINI_API_KEY
+
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY environment variable is not set")
   }
@@ -52,23 +53,11 @@ export async function evaluateClass(data: EvaluationData): Promise<AnalysisResul
     const genAI = getGeminiClient()
 
     const prompt = `
-    Analiza la siguiente evaluación de clase y proporciona insights constructivos:
-
-    DATOS DE LA EVALUACIÓN:
+    Analiza la siguiente evaluación:
     - Curso: ${getCourseFullName(data.course)}
-    - Participación: ${data.participation}/5 estrellas
-    - Claridad: ${data.clarity}/5 estrellas  
-    - Ritmo: ${data.pace}/5 estrellas
-    - Comentarios del estudiante: "${data.comments}"
-    - Estudiante: ${data.studentName}
-
-    Por favor proporciona:
-    1. Un resumen breve de la evaluación (máximo 2 líneas)
-    2. Los aspectos más fuertes identificados
-    3. Áreas de oportunidad específicas
-    4. Una recomendación concreta para el docente
-
-    Mantén un tono profesional y constructivo. Enfócate en sugerencias prácticas.
+    - Comentarios: "${data.comments}"
+    
+    Proporciona: Resumen, Fortalezas, Mejoras, Recomendación.
     `
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
@@ -92,7 +81,7 @@ export async function evaluateClass(data: EvaluationData): Promise<AnalysisResul
       .map(([aspect, _]) => getAspectName(aspect))
 
     const insights: EvaluationInsights = {
-      summary: aiAnalysis.split("\n")[0] || "Evaluación procesada exitosamente",
+      summary: aiAnalysis.split("\n")[0] || "Evaluación procesada",
       fullAnalysis: aiAnalysis,
       strengths,
       improvements,
