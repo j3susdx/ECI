@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+// Importamos dynamic de next/dynamic
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,25 +12,44 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { evaluateClassAction, getAllCoursesAction } from "@/lib/server-actions";
 import { signOutToLogin } from "@/actions/signout.action";
-import Avatar3D from "@/components/Avatar3D";
 
-// Subcomponente Estrellas
+// 🚨 CAMBIO IMPORTANTE: Importación dinámica sin SSR
+// Esto evita que 'three.js' intente cargar en el servidor y cause el error de ProgressEvent
+const Avatar3D = dynamic(() => import("@/components/Avatar3D"), {
+  ssr: false,
+  loading: () => (
+    // Opcional: Un esqueleto o loader mientras carga el 3D
+    <div className="w-full h-[450px] bg-slate-800/50 rounded-xl flex items-center justify-center animate-pulse">
+      <Loader2 className="h-10 w-10 text-blue-500 animate-spin" />
+    </div>
+  )
+});
+// Subcomponente Estrellas (Versión "Indestructible")
 function StarRating({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-3 flex flex-col items-center sm:items-start">
       <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">{label}</label>
-      <div className="flex gap-2">
+
+      {/* - flex-wrap: Si haces mucho zoom y no caben, bajan a la siguiente línea sin romperse.
+         - justify-center: Se centran si el espacio es reducido.
+      */}
+      <div className="flex gap-2 flex-wrap justify-center sm:justify-start">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
             key={star}
             type="button"
             onClick={() => onChange(star)}
             className={cn(
-              "transition-all duration-200 hover:scale-110 active:scale-95",
-              star <= value ? "text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]" : "text-slate-700 hover:text-slate-500"
+              // shrink-0 evita que se aplasten.
+              // w-10 h-10 asegura que el área de toque sea grande y fija.
+              "shrink-0 w-10 h-10 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-110 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500/50",
+              star <= value
+                ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
+                : "text-slate-700 hover:text-slate-500 hover:bg-slate-800/50"
             )}
           >
-            <Star className={cn("h-8 w-8", star <= value ? "fill-current" : "")} />
+            {/* Icono responsive: un poco más pequeño en móviles para que quepan mejor */}
+            <Star className={cn("h-6 w-6 sm:h-8 sm:w-8 transition-colors", star <= value ? "fill-current" : "")} />
           </button>
         ))}
       </div>
@@ -243,7 +264,7 @@ export default function StudentPage() {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 p-6 bg-slate-800/30 rounded-2xl border border-slate-800/60">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 bg-slate-800/30 rounded-2xl border border-slate-800/60">
                   <StarRating label="Participación" value={ratings.participation} onChange={(v) => setRatings({ ...ratings, participation: v })} />
                   <StarRating label="Claridad" value={ratings.clarity} onChange={(v) => setRatings({ ...ratings, clarity: v })} />
                   <StarRating label="Ritmo" value={ratings.pace} onChange={(v) => setRatings({ ...ratings, pace: v })} />

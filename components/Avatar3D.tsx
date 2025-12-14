@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useGLTF, Environment, OrbitControls, ContactShadows } from "@react-three/drei";
 import * as THREE from 'three';
 
+// Tu URL personalizada
 const AVATAR_URL = "https://models.readyplayer.me/693ae7c2fe6f676b66eeaf44.glb";
 
 function Model({ isTalking }: { isTalking: boolean }) {
@@ -14,31 +15,36 @@ function Model({ isTalking }: { isTalking: boolean }) {
     const nextBlinkTime = useRef(Date.now() + 2000);
 
     useEffect(() => {
+        // Forzamos que el modelo reciba sombras y luz correctamente
         scene.traverse((child: any) => {
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
+                // SOLUCIÓN "BLANCO": Aseguramos que el material reaccione bien a la luz
+                if (child.material) {
+                    child.material.envMapIntensity = 0.8; // Reduce reflejo excesivo
+                    child.material.needsUpdate = true;
+                }
             }
         });
     }, [scene]);
 
-    // EL BUCLE QUE SE EJECUTA 60 VECES POR SEGUNDO
     useFrame((state) => {
         if (!avatarRef.current) return;
         const time = state.clock.elapsedTime;
 
+        // --- POSICIÓN Y ANIMACIÓN ---
+        // (Mantenemos tu código de fuerza bruta para los brazos)
 
         if (nodes.RightForeArm && nodes.LeftForeArm) {
-            // Codos rectos
             nodes.LeftForeArm.rotation.set(0, 0, 0);
             nodes.RightForeArm.rotation.set(0, 0, 0);
         }
-        // ==========================================
 
-        // 1. RESPIRACIÓN
+        // RESPIRACIÓN
         avatarRef.current.position.y = -1.5 + Math.sin(time * 1) * 0.003;
 
-        // 2. HABLA (Lip Sync)
+        // HABLA (Lip Sync)
         const headMesh = nodes.Wolf3D_Head;
         const teethMesh = nodes.Wolf3D_Teeth;
         const mouthIdx = headMesh.morphTargetDictionary['viseme_aa'] ?? headMesh.morphTargetDictionary['mouthOpen'];
@@ -57,7 +63,7 @@ function Model({ isTalking }: { isTalking: boolean }) {
             if (teethMesh && teethIdx !== undefined) teethMesh.morphTargetInfluences[teethIdx] = smoothOpen;
         }
 
-        // 3. PARPADEO
+        // PARPADEO
         const eyeLeftIdx = headMesh.morphTargetDictionary['eyeBlinkLeft'];
         const eyeRightIdx = headMesh.morphTargetDictionary['eyeBlinkRight'];
         if (eyeLeftIdx !== undefined) {
@@ -74,7 +80,7 @@ function Model({ isTalking }: { isTalking: boolean }) {
             headMesh.morphTargetInfluences[eyeRightIdx] = newBlink;
         }
 
-        // 4. MIRADA SUTIL
+        // MIRADA SUTIL
         const targetRotY = state.pointer.x * 0.05;
         const targetRotX = -state.pointer.y * 0.05;
         avatarRef.current.rotation.y = THREE.MathUtils.lerp(avatarRef.current.rotation.y, targetRotY, 0.05);
@@ -93,21 +99,22 @@ function Model({ isTalking }: { isTalking: boolean }) {
 
 export default function Avatar3D({ isTalking = false }: { isTalking?: boolean }) {
     return (
-        <div className="w-full h-[450px] rounded-xl overflow-hidden shadow-2xl bg-gradient-to-b from-slate-900 to-slate-800 border border-slate-700 relative">
+        // CAMBIO RESPONSIVE: Altura dinámica (300px en móvil, 450px en PC)
+        <div className="w-full h-[300px] md:h-[450px] rounded-xl overflow-hidden shadow-2xl bg-gradient-to-b from-slate-900 to-slate-800 border border-slate-700 relative">
 
-            {/* CÁMARA AJUSTADA */}
             <Canvas camera={{ position: [0, 1.4, 3.8], fov: 30 }} shadows>
+                {/* LUCES: Ajustadas para que no "quemen" al avatar dejándolo blanco */}
+                <ambientLight intensity={0.6} />
+                <spotLight position={[2, 2, 4]} angle={0.3} penumbra={0.5} intensity={1.0} castShadow color="#fff5e6" />
+                <pointLight position={[-3, 1, -3]} intensity={1.0} color="#6366f1" />
 
-                <ambientLight intensity={0.5} />
-                <spotLight position={[2, 2, 4]} angle={0.3} penumbra={0.5} intensity={1.3} castShadow color="#fff5e6" />
-                <pointLight position={[-3, 1, -3]} intensity={1.5} color="#6366f1" />
+                {/* SUSPENSE: Espera a que cargue todo antes de mostrarlo */}
+                <Suspense fallback={null}>
+                    <Model isTalking={isTalking} />
+                    <Environment preset="city" />
+                    <ContactShadows opacity={0.4} scale={5} blur={2} far={2} position={[0, -1.7, 0]} />
+                </Suspense>
 
-                <Model isTalking={isTalking} />
-
-                <ContactShadows opacity={0.4} scale={5} blur={2} far={2} position={[0, -1.7, 0]} />
-                <Environment preset="city" />
-
-                {/* OBJETIVO AL CUELLO/PECHO */}
                 <OrbitControls
                     target={[0, 1.25, 0]}
                     enableZoom={false}
